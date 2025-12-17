@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import {
-  chatActions,
-  loadModel,
-  sendMessage,
-} from "../../store/chat.slice";
-
+import { chatActions, loadModel, sendMessage } from "../../store/chat.slice";
+import { isReady } from "../../services/llmService";
 import "./Chats.css";
 
 export default function Chat() {
   const dispatch = useAppDispatch();
-  const { roleText, messages, model, busy } = useAppSelector((s) => s.chat);
+  const { chats, activeChatId, model, busy } = useAppSelector((s) => s.chat);
+  const activeChat = chats[activeChatId];
   const [input, setInput] = useState("");
+
+  const roleText = activeChat?.roleText || "";
+  const activeRole = activeChat?.activeRole || "";
+  const roleLocked = activeChat?.roleLocked || false;
+  const messages = activeChat?.messages || [];
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -19,9 +21,22 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, busy]);
 
+  // Sync Redux state with actual engine state (fixes HMR desync)
+  useEffect(() => {
+    if (model.loaded && !isReady()) {
+      dispatch(chatActions.setModelLoaded(false));
+    }
+  }, [dispatch, model.loaded]);
+
   function handleSend() {
     const text = input.trim();
     if (!text || busy) return;
+
+    // Guard: check actual engine readiness, not just Redux flag
+    if (!isReady()) {
+      dispatch(chatActions.setModelLoaded(false));
+      return;
+    }
 
     setInput("");
     dispatch(chatActions.appendUser(text));
@@ -38,7 +53,11 @@ export default function Chat() {
           onClick={() => dispatch(loadModel())}
           disabled={model.loading}
         >
-          {model.loading ? "Loading model…" : model.loaded ? "Model loaded" : "Load model"}
+          {model.loading
+            ? "Loading model…"
+            : model.loaded
+            ? "Model loaded"
+            : "Load model"}
         </button>
 
         <div className="model-progress">{model.progress}</div>
@@ -47,17 +66,46 @@ export default function Chat() {
         <textarea
           className="role-input"
           rows={6}
-          value={roleText}
+          value={roleLocked ? activeRole : roleText}
+          disabled={roleLocked}
           onChange={(e) => dispatch(chatActions.setRoleText(e.target.value))}
           placeholder='e.g. "You are a boxing coach. Be strict and concise."'
         />
 
+        {roleLocked && (
+          <div className="hint">
+            Role is locked for this chat. Click "New chat" to change it.
+          </div>
+        )}
+
         <button
           className="secondary-btn"
-          onClick={() => dispatch(chatActions.newChat())}
+          onClick={() => dispatch(chatActions.createChat())}
         >
           New chat
         </button>
+
+        <div className="chat-tabs">
+          {Object.values(chats).map((chat) => (
+            <div
+              key={chat.id}
+              className={`chat-tab ${chat.id === activeChatId ? "active" : ""}`}
+              onClick={() => dispatch(chatActions.setActiveChat(chat.id))}
+            >
+              <span className="chat-tab-title">{chat.title}</span>
+              <button
+                className="chat-tab-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch(chatActions.deleteChat(chat.id));
+                }}
+                title="Delete chat"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
       </aside>
 
       {/* Chat */}
