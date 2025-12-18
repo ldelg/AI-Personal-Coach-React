@@ -1,48 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { chatActions, loadModel, sendMessage } from "../../store/chat.slice";
+import { chatActions, loadModel, sendMessage, verifyModelReady, selectActiveMessages, selectActiveChatFields } from "../../store/chat.slice";
 import { isReady } from "../../services/llmService";
+import useIsWide from "../../hooks/useIsWide";
 import "./Chats.css";
 
 export default function Chat() {
   const dispatch = useAppDispatch();
   const { chats, activeChatId, model, busy } = useAppSelector((s) => s.chat);
-  const activeChat = chats[activeChatId];
-  const [input, setInput] = useState("");
+  const { roleText, activeRole, roleLocked } = useAppSelector(selectActiveChatFields); 
+  const messages = useAppSelector(selectActiveMessages);
 
-  const defaultIsWide = typeof window !== "undefined" ? window.innerWidth > 550 : true;
-  const [isWide, setIsWide] = useState(defaultIsWide);
-  const [sidebarOpen, setSidebarOpen] = useState(defaultIsWide);
-
-  useEffect(() => {
-    const onResize = () => setIsWide(window.innerWidth > 550);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  const roleText = activeChat?.roleText || "";
-  const activeRole = activeChat?.activeRole || "";
-  const roleLocked = activeChat?.roleLocked || false;
-  const messages = activeChat?.messages || [];
-
+  const isWide = useIsWide(550);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(isWide);
+  const [input, setInput] = useState("");
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, busy]);
 
-  // Sync Redux state with actual engine state (fixes HMR desync)
   useEffect(() => {
-    if (model.loaded && !isReady()) {
-      dispatch(chatActions.setModelLoaded(false));
-    }
-  }, [dispatch, model.loaded]);
+    dispatch(verifyModelReady());
+  }, [dispatch]);
 
   function handleSend() {
     const text = input.trim();
     if (!text || busy) return;
 
-    // Guard: check actual engine readiness, not just Redux flag
     if (!isReady()) {
       dispatch(chatActions.setModelLoaded(false));
       return;
@@ -59,7 +45,6 @@ export default function Chat() {
         <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* When collapsed: show inline small column on wide screens, fixed handle on small screens */}
       {!sidebarOpen && isWide && (
         <div className="sidebar-column">
           <button className="sidebar-toggle" aria-label="Open sidebar" onClick={() => setSidebarOpen(true)}>☰</button>
@@ -148,7 +133,6 @@ export default function Chat() {
         </div>
       </aside>
 
-      {/* Chat */}
       <main className="chat-main">
         <header className="chat-header">
           <span>Chat</span>

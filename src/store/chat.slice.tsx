@@ -2,38 +2,9 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMsg } from "../interfaces/chatMsg";
 import * as llm from "../services/llmService";
-
-type ChatSession = {
-  id: string;
-  title: string;
-  roleText: string;
-  activeRole: string;
-  roleLocked: boolean;
-  messages: ChatMsg[];
-};
-
-type ChatState = {
-  activeChatId: string;
-  chats: Record<string, ChatSession>;
-  model: {
-    loading: boolean;
-    loaded: boolean;
-    progress: string;
-    error?: string;
-  };
-  busy: boolean;
-};
-
-function createNewChat(roleSeed = "You are a helpful assistant."): ChatSession {
-  return {
-    id: crypto.randomUUID(),
-    title: "New chat",
-    roleText: roleSeed,
-    activeRole: "",
-    roleLocked: false,
-    messages: [],
-  };
-}
+import type { RootState, AppDispatch } from "./store";
+import type { ChatState } from "./chat.types";
+import { createNewChat } from "./chat.types";
 
 const firstChat = createNewChat();
 
@@ -45,6 +16,35 @@ const initialState: ChatState = {
   model: { loading: false, loaded: false, progress: "" },
   busy: false,
 };
+
+export const verifyModelReady = () => (
+  dispatch: AppDispatch,
+  getState: () => RootState
+) => {
+  const state: ChatState = getState().chat;
+  if (state.model.loaded && !llm.isReady()) {
+    dispatch(chatSlice.actions.setModelLoaded(false));
+  }
+};
+
+// Selectors
+export const selectActiveChat = (state: RootState) =>
+  state.chat.chats[state.chat.activeChatId];
+
+export const selectActiveChatFields = (state: RootState) => {
+  const c = selectActiveChat(state);
+  return {
+    roleText: c?.roleText ?? "",
+    activeRole: c?.activeRole ?? "",
+    roleLocked: c?.roleLocked ?? false,
+    messages: c?.messages ?? ([] as ChatMsg[]),
+  };
+};
+
+export const selectActiveMessages = (state: RootState) =>
+  selectActiveChat(state)?.messages ?? ([] as ChatMsg[]);
+
+//Thunk actions
 
 export const loadModel = createAsyncThunk(
   "chat/loadModel",
