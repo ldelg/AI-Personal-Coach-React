@@ -10,6 +10,16 @@ export default function Chat() {
   const activeChat = chats[activeChatId];
   const [input, setInput] = useState("");
 
+  const defaultIsWide = typeof window !== "undefined" ? window.innerWidth > 550 : true;
+  const [isWide, setIsWide] = useState(defaultIsWide);
+  const [sidebarOpen, setSidebarOpen] = useState(defaultIsWide);
+
+  useEffect(() => {
+    const onResize = () => setIsWide(window.innerWidth > 550);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const roleText = activeChat?.roleText || "";
   const activeRole = activeChat?.activeRole || "";
   const roleLocked = activeChat?.roleLocked || false;
@@ -44,9 +54,39 @@ export default function Chat() {
   }
 
   return (
-    <div className="chat-page">
-      <aside className="chat-sidebar">
-        <h2>Offline Chat</h2>
+    <div className={`chat-page ${sidebarOpen && !isWide ? "sidebar-overlay" : ""} ${!sidebarOpen ? "sidebar-collapsed" : ""}`}>
+      {sidebarOpen && !isWide && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* When collapsed: show inline small column on wide screens, fixed handle on small screens */}
+      {!sidebarOpen && isWide && (
+        <div className="sidebar-column">
+          <button className="sidebar-toggle" aria-label="Open sidebar" onClick={() => setSidebarOpen(true)}>☰</button>
+        </div>
+      )}
+
+      {!sidebarOpen && !isWide && (
+        <div className="sidebar-handle" onClick={() => setSidebarOpen(true)}>
+          <button className="sidebar-toggle" aria-label="Open sidebar">☰</button>
+        </div>
+      )}
+
+      <aside
+        className={`chat-sidebar ${!sidebarOpen ? "hidden" : ""} ${
+          sidebarOpen && !isWide ? "overlay" : ""
+        }`}
+      >
+        <div className="sidebar-header">
+          <h2>Offline Chat</h2>
+          <button
+            className="sidebar-toggle"
+            aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            onClick={() => setSidebarOpen(false)}
+          >
+            ☰
+          </button>
+        </div>
 
         <button
           className="primary-btn"
