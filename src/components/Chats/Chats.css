@@ -5,7 +5,9 @@
   font-family: system-ui, sans-serif;
 }
 
-.chat-page { position: relative; }
+.chat-page {
+  position: relative;
+}
 
 .chat-sidebar {
   width: 320px;
@@ -27,16 +29,17 @@
   border-right: 1px solid #e5e5e5;
 }
 
-.chat-sidebar.hidden { display: none; }
+.chat-sidebar.hidden {
+  display: none;
+}
 
 .chat-sidebar.overlay {
   position: absolute;
   left: 0;
-  /* start below the navbar to avoid overlapping it */
-  top: var(--navbar-height,52px);
-  height: calc(100% - var(--navbar-height,52px));
+  top: 0;
+  height: 100%;
   z-index: 60;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   width: 320px;
 }
 
@@ -44,9 +47,9 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: var(--navbar-height,52px);
+  top: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.28);
+  background: rgba(0, 0, 0, 0.28);
   z-index: 50;
 }
 
@@ -162,15 +165,24 @@
   cursor: pointer;
 }
 
-.sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
-.chat-sidebar .sidebar-toggle { background: transparent; color: #111; font-size: 14px; padding: 6px 10px; border-radius: 6px; }
-
-.chat-page.sidebar-overlay .chat-main { }
+.chat-sidebar .sidebar-toggle {
+  background: transparent;
+  color: #111;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
 
 .sidebar-handle {
   left: 0;
-  top: var(--navbar-height,52px);
+  top: var(--navbar-height, 52px);
   z-index: 70;
   width: 56px;
   height: 100%;
@@ -193,7 +205,9 @@
   justify-content: center;
 }
 
-.chat-page.sidebar-collapsed .sidebar-handle { z-index: 80; }
+.chat-page.sidebar-collapsed .sidebar-handle {
+  z-index: 80;
+}
 
 .thinking {
   font-size: 12px;

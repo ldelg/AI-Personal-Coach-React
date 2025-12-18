@@ -17,15 +17,13 @@ const initialState: ChatState = {
   busy: false,
 };
 
-export const verifyModelReady = () => (
-  dispatch: AppDispatch,
-  getState: () => RootState
-) => {
-  const state: ChatState = getState().chat;
-  if (state.model.loaded && !llm.isReady()) {
-    dispatch(chatSlice.actions.setModelLoaded(false));
-  }
-};
+export const verifyModelReady =
+  () => (dispatch: AppDispatch, getState: () => RootState) => {
+    const state: ChatState = getState().chat;
+    if (state.model.loaded && !llm.isReady()) {
+      dispatch(chatSlice.actions.setModelLoaded(false));
+    }
+  };
 
 // Selectors
 export const selectActiveChat = (state: RootState) =>
@@ -75,7 +73,8 @@ export const sendMessage = createAsyncThunk<
 
   const conversationMessages = messages.filter((m) => m.role !== "system");
 
-  const MAX_TURNS = 12;
+  // Reduced to prevent GPU memory issues - 6 turns = 12 messages (6 user + 6 assistant)
+  const MAX_TURNS = 6;
   const trimmedMessages = conversationMessages.slice(-MAX_TURNS * 2);
 
   const full: ChatMsg[] = [
@@ -165,11 +164,22 @@ const chatSlice = createSlice({
     });
     b.addCase(sendMessage.rejected, (s, a) => {
       s.busy = false;
+      const errorMsg = String(a.error.message);
+
+      // If device was lost, mark model as not loaded so user can reload
+      if (
+        errorMsg.includes("Device was lost") ||
+        errorMsg.includes("disposed") ||
+        errorMsg.includes("external Instance reference")
+      ) {
+        s.model.loaded = false;
+      }
+
       const chat = s.chats[s.activeChatId];
       if (chat) {
         chat.messages.push({
           role: "assistant",
-          content: `⚠️ ${String(a.error.message)}`,
+          content: `⚠️ ${errorMsg}`,
         });
       }
     });

@@ -34,6 +34,18 @@ export function isReady() {
 export async function complete(messages: ChatMsg[]) {
   const engine = getEngine();
   if (!engine) throw new Error("Model not loaded");
-  const res = await engine.chat.completions.create({ messages, stream: false });
-  return res.choices[0]?.message?.content ?? "";
+  
+  try {
+    const res = await engine.chat.completions.create({ messages, stream: false });
+    return res.choices[0]?.message?.content ?? "";
+  } catch (error: any) {
+    // Handle GPU device loss - clear engine so it can be reloaded
+    if (error?.message?.includes("Device was lost") || 
+        error?.message?.includes("disposed") ||
+        error?.message?.includes("external Instance reference")) {
+      setEngine(null);
+      throw new Error("GPU device lost. Please reload the model.");
+    }
+    throw error;
+  }
 }
