@@ -1,13 +1,13 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar/Navbar";  
+import Navbar from "./components/Navbar/Navbar";
 
 const Chats = lazy(() => import("./components/Chats/Chats"));
 const Settings = lazy(() => import("./components/Settings/Settings"));
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/AI-Personal-Coach-React/">
       <Navbar />
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
@@ -20,4 +20,4 @@ function App() {
   );
 }
 
-export default App;   
+export default App;
