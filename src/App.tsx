@@ -7,7 +7,7 @@ const Settings = lazy(() => import("./components/Settings/Settings"));
 
 function App() {
   return (
-    <BrowserRouter basename="/AI-Personal-Coach-React/">
+    <BrowserRouter basename="/AI-Personal-Coach-React">
       <Navbar />
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
