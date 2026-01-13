@@ -14,6 +14,7 @@ function App() {
           <Route path="/chats" element={<Chats />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/" element={<Chats />} />
+          <Route path="*" element={<Chats />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
