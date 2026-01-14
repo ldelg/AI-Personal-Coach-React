@@ -15,16 +15,21 @@ export async function initModel(
   modelId: string,
   onProgress?: (text: string) => void
 ) {
-  // If already initialized, reuse it
   const existing = getEngine();
   if (existing) return existing;
 
-  const engine = await webllm.CreateMLCEngine(modelId, {
-    initProgressCallback: (r) => onProgress?.(r.text ?? ""),
-  });
+  try {
+    const engine = await webllm.CreateMLCEngine(modelId, {
+      initProgressCallback: (r: any) => onProgress?.(r?.text ?? ""),
+    });
 
-  setEngine(engine);
-  return engine;
+    setEngine(engine);
+    return engine;
+  } catch (err) {
+    console.error("CreateMLCEngine failed:", err);
+    setEngine(null);
+    return null;
+  }
 }
 
 export function isReady() {
@@ -32,20 +37,6 @@ export function isReady() {
 }
 
 export async function getAvailableModels(): Promise<string[]> {
-  try {
-    if ((webllm as any).getModelList) {
-      return await (webllm as any).getModelList();
-    }
-    if ((webllm as any).modelList) {
-      return (webllm as any).modelList;
-    }
-    if ((webllm as any).MODEL_LIST) {
-      return (webllm as any).MODEL_LIST;
-    }
-  } catch (err) {
-    console.warn("Could not fetch model list:", err);
-  }
-
   return [
     "Qwen2.5-0.5B-Instruct-q4f16_1-MLC",
     "Llama-3.2-1B-Instruct-q4f16_1-MLC",
@@ -117,7 +108,10 @@ export async function removeModel(modelId?: string) {
 }
 export async function complete(messages: ChatMsg[]) {
   const engine = getEngine();
-  if (!engine) throw new Error("Model not loaded");
+  if (!engine) {
+    console.warn("complete() called without engine");
+    return "Model not loaded.";
+  }
 
   try {
     const res = await engine.chat.completions.create({
@@ -126,15 +120,7 @@ export async function complete(messages: ChatMsg[]) {
     });
     return res.choices[0]?.message?.content ?? "";
   } catch (error: any) {
-    // Handle GPU device loss - clear engine so it can be reloaded
-    if (
-      error?.message?.includes("Device was lost") ||
-      error?.message?.includes("disposed") ||
-      error?.message?.includes("external Instance reference")
-    ) {
-      setEngine(null);
-      throw new Error("GPU device lost. Please reload the model.");
-    }
-    throw error;
+    setEngine(null);
+    return "Model error. Please reload.";
   }
 }
