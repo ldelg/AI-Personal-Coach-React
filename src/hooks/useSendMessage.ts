@@ -4,12 +4,12 @@ import { isReady } from "../services/llmService";
 
 export default function useSendMessage(clearInput?: () => void) {
   const dispatch = useAppDispatch();
-  const { busy } = useAppSelector((s) => s.chat);
+  const { busy, model } = useAppSelector((s) => s.chat);
 
   return (text: string) => {
     const trimmed = text.trim();
 
-    if (!trimmed || busy) return;
+    if (!trimmed || busy || !model.loaded) return;
 
     if (!isReady()) {
       dispatch(chatActions.setModelLoaded(false));

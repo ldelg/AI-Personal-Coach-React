@@ -1,5 +1,9 @@
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { chatActions, loadModel, selectActiveChatFields } from "../../store/chat.slice";
+import {
+  chatActions,
+  loadModel,
+  selectActiveChatFields,
+} from "../../store/chat.slice";
 import "./Chats.css";
 
 interface ChatSidebarProps {
@@ -17,7 +21,9 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   const dispatch = useAppDispatch();
   const { chats, activeChatId, model } = useAppSelector((s) => s.chat);
-  const { roleText, activeRole, roleLocked } = useAppSelector(selectActiveChatFields);
+  const { roleText, activeRole, roleLocked } = useAppSelector(
+    selectActiveChatFields
+  );
 
   return (
     <>
@@ -51,7 +57,7 @@ export default function ChatSidebar({
         }`}
       >
         <div className="sidebar-header">
-          <h2>Offline Chat</h2>
+          <h2 className="sidebar-title">Offline Chat</h2>
           <button
             className="sidebar-toggle"
             aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
@@ -123,4 +129,3 @@ export default function ChatSidebar({
     </>
   );
 }
-

@@ -1,4 +1,3 @@
-
 .navbar {
   width: 100%;
   background: #ffffff;
@@ -12,7 +11,6 @@
 .header-container {
   margin: 0 auto;
   width: 100%;
-  max-width: 1100px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,6 +28,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  padding-right: 30px;
 }
 
 .nav-item {
@@ -59,7 +58,13 @@
 }
 
 @media (max-width: 640px) {
-  .header-container { flex-direction: column; align-items: stretch; }
-  .nav-list { justify-content: flex-start; overflow-x: auto; padding-bottom: 8px; }
+  .header-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-list {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
 }
-

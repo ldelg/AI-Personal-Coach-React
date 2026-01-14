@@ -1,4 +1,8 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  createSelector,
+} from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMsg } from "../interfaces/chatMsg";
 import * as llm from "../services/llmService";
@@ -18,10 +22,15 @@ const initialState: ChatState = {
 };
 
 export const verifyModelReady =
-  () => (dispatch: AppDispatch, getState: () => RootState) => {
+  () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state: ChatState = getState().chat;
     if (state.model.loaded && !llm.isReady()) {
-      dispatch(chatSlice.actions.setModelLoaded(false));
+      try {
+        await dispatch(loadModel(state.model.modelId));
+      } catch (e) {
+        console.log("Model re-initialization failed:", e);
+        dispatch(chatSlice.actions.setModelLoaded(false));
+      }
     }
   };
 
@@ -29,32 +38,60 @@ export const verifyModelReady =
 export const selectActiveChat = (state: RootState) =>
   state.chat.chats[state.chat.activeChatId];
 
-export const selectActiveChatFields = (state: RootState) => {
-  const c = selectActiveChat(state);
-  return {
-    roleText: c?.roleText ?? "",
-    activeRole: c?.activeRole ?? "",
-    roleLocked: c?.roleLocked ?? false,
-    messages: c?.messages ?? ([] as ChatMsg[]),
-  };
-};
+// Memoized selector to prevent unnecessary re-renders
+export const selectActiveChatFields = createSelector(
+  [selectActiveChat],
+  (chat) => {
+    if (!chat) {
+      return {
+        roleText: "",
+        activeRole: "",
+        roleLocked: false,
+        messages: [] as ChatMsg[],
+      };
+    }
+    return {
+      roleText: chat.roleText,
+      activeRole: chat.activeRole,
+      roleLocked: chat.roleLocked,
+      messages: chat.messages,
+    };
+  }
+);
 
-export const selectActiveMessages = (state: RootState) =>
-  selectActiveChat(state)?.messages ?? ([] as ChatMsg[]);
+// Memoized selector for messages
+export const selectActiveMessages = createSelector(
+  [selectActiveChat],
+  (chat) => chat?.messages ?? ([] as ChatMsg[])
+);
 
 //Thunk actions
 
 export const loadModel = createAsyncThunk(
   "chat/loadModel",
-  async (_, { dispatch }) => {
-    if (llm.isReady()) {
-      return true;
+  async (modelId: string | undefined, { dispatch, getState }) => {
+    const id = modelId ?? "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+    const state = getState() as { chat: ChatState };
+    const currentModelId = state.chat.model.modelId;
+
+    if (llm.isReady() && currentModelId === id) {
+      return id;
     }
-    //gemma-2-2b-it-q4f16_1-MLC
-    await llm.initModel("Llama-3.2-1B-Instruct-q4f16_1-MLC", (t) =>
-      dispatch(chatSlice.actions.setProgress(t))
-    );
-    return true;
+
+    if (llm.isReady() && currentModelId !== id) {
+      llm.clearEngine();
+    }
+
+    try {
+      await llm.initModel(id, (t) =>
+        dispatch(chatSlice.actions.setProgress(t))
+      );
+      return id;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : `Failed to load model: ${id}`;
+      throw new Error(message);
+    }
   }
 );
 
@@ -124,6 +161,9 @@ const chatSlice = createSlice({
     setModelLoaded(s, a: PayloadAction<boolean>) {
       s.model.loaded = a.payload;
     },
+    setModelId(s, a: PayloadAction<string | undefined>) {
+      s.model.modelId = a.payload;
+    },
     appendUser(s, a: PayloadAction<string>) {
       const chat = s.chats[s.activeChatId];
       if (!chat) return;
@@ -143,9 +183,12 @@ const chatSlice = createSlice({
       s.model.loaded = false;
       s.model.error = undefined;
     });
-    b.addCase(loadModel.fulfilled, (s) => {
+    b.addCase(loadModel.fulfilled, (s, a) => {
       s.model.loading = false;
-      s.model.loaded = llm.isReady();
+      s.model.loaded = true;
+      if (a.payload) {
+        s.model.modelId = a.payload as string;
+      }
     });
     b.addCase(loadModel.rejected, (s, a) => {
       s.model.loading = false;

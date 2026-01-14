@@ -9,6 +9,7 @@ import "./Chats.css";
 export default function Chat() {
   const dispatch = useAppDispatch();
   const { busy } = useAppSelector((s) => s.chat);
+  const { model } = useAppSelector((s) => s.chat);
   const messages = useAppSelector(selectActiveMessages);
 
   const isWide = useIsWide(550);
@@ -24,7 +25,11 @@ export default function Chat() {
   }, [messages.length, busy]);
 
   useEffect(() => {
-    dispatch(verifyModelReady());
+    const hasRun = sessionStorage.getItem("modelVerified");
+    if (!hasRun) {
+      dispatch(verifyModelReady());
+      sessionStorage.setItem("modelVerified", "true");
+    }
   }, [dispatch]);
 
   return (
@@ -39,6 +44,13 @@ export default function Chat() {
       <main className="chat-main">
         <header className="chat-header">
           <span>Chat</span>
+          <span style={{ marginLeft: 12, fontSize: 12, color: "#665" }}>
+            {model.loaded
+              ? `Model: ${model.modelId ?? "loaded"}`
+              : model.loading
+              ? "Model: loading…"
+              : "Model: not loaded"}
+          </span>
           {busy && <span className="thinking">Thinking…</span>}
         </header>
 
@@ -68,13 +80,21 @@ export default function Chat() {
             placeholder="Type a message…"
             disabled={busy}
             onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage(input);
+              if (e.key === "Enter" && !busy && model.loaded)
+                sendMessage(input);
             }}
           />
           <button
             className="send-btn"
             onClick={() => sendMessage(input)}
-            disabled={busy || !input.trim()}
+            disabled={busy || !model.loaded}
+            title={
+              !model.loaded
+                ? model.loading
+                  ? "Model is loading…"
+                  : "Model not loaded — please load a model in Settings"
+                : undefined
+            }
           >
             Send
           </button>

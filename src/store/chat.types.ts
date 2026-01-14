@@ -17,6 +17,7 @@ export type ChatState = {
     loaded: boolean;
     progress: string;
     error?: string;
+    modelId?: string;
   };
   busy: boolean;
 };
